@@ -5,7 +5,7 @@ jobs:
   build:
     name: Build ${{ matrix.target }}
     runs-on: ubuntu-24.04-arm
-    strategy: {fail-fast: false, matrix: {target: [ubi2-oc, ubi2, SNAPSHOT]}}
+    strategy: {fail-fast: false, matrix: {target: [ubi2-ce]}}
     env:
       DK_OPENWRT: /bld/openwrt
       DK_BIN: /bld/openwrt_bin
@@ -30,7 +30,7 @@ jobs:
       run: |
         mkdir -p openwrt_bin ghcache stcache dlcache
         if [ -z "$(ls -A ghcache 2>&-)" ] || [ -z "$(ls -A stcache 2>&-)" ]; then
-          I=ghcr.io/w1700k/fastbuild_base:base-bldcache-${{ matrix.target }}
+          I=ghcr.io/w1700k/fastbuild_base:base-bldcache-ubi2
           docker pull $I 2>&- && { docker create --name CA $I >/dev/null; for d in ghcache stcache dlcache; do docker cp CA:/$d/. $d; done; }
         fi
 
@@ -97,7 +97,7 @@ jobs:
         VERSION="${{ matrix.target }}_$(date +'%Y.%m.%d')_$(jq -r '.version_code' firmware/profiles.json)"
         sed -i "s/^/    /; 1s/^/## $VERSION\n\n/" openwrt_bin/build_info
         gh release list --json tagName --jq '.[].tagName' | grep "^${{ matrix.target }}_" | xargs -r gh release delete --cleanup-tag -y ||:
-        gh release create $VERSION firmware/*sysupgrade.itb --title $VERSION --notes-file openwrt_bin/build_info
+        gh release create $VERSION firmware/*sysupgrade.itb firmware/*.manifest --title $VERSION --notes-file openwrt_bin/build_info
 
     - name: Upload builder container
       run: |
